@@ -1,31 +1,43 @@
-import random 
+import random
 from pathlib import Path
 import shutil
 
 DATA = Path("data/")
 TRAIN = DATA / "train/"
+VAL = DATA / "val/"
 TEST = DATA / "test/"
-TEST_SIZE = 0.8
+
+TRAIN_RATIO = 0.8
+VAL_RATIO = 0.1
+TEST_RATIO = 0.1
+
+assert TRAIN_RATIO + VAL_RATIO + TEST_RATIO == 1.0
 
 random.seed(42)
 
 for category in ["Interior", "Exterior"]:
-    files = list((DATA / category).rglob("*.*"))
-    files = [f for f in files if f.is_file()]
-
+    files = [f for f in (DATA / category).rglob("*.*") if f.is_file()]
     random.shuffle(files)
-    split = int(TEST_SIZE * len(files))
 
-    train_files = files[:split]
-    test_files = files[split:]
+    n = len(files)
+    train_end = int(TRAIN_RATIO * n)
+    val_end = train_end + int(VAL_RATIO * n)
 
-    # Créer les dossiers 
-    (TRAIN / category).mkdir(parents=True, exist_ok=True)
-    (TEST / category).mkdir(parents=True, exist_ok=True)
+    train_files = files[:train_end]
+    val_files = files[train_end:val_end]
+    test_files = files[val_end:]
 
-    for f in train_files:
-        shutil.copy(f, TRAIN / category / f.name)
-    for f in test_files:
-        shutil.copy(f, TEST / category / f.name)
+    for split, split_files in zip(
+        [TRAIN, VAL, TEST],
+        [train_files, val_files, test_files]
+    ):
+        (split / category).mkdir(parents=True, exist_ok=True)
+        for f in split_files:
+            shutil.copy(f, split / category / f.name)
 
-print(f"Copied {len(train_files)} files to {TRAIN} and {len(test_files)} files to {TEST}")
+    print(
+        f"{category}: "
+        f"{len(train_files)} train | "
+        f"{len(val_files)} val | "
+        f"{len(test_files)} test"
+    )
